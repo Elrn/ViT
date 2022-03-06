@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import *
 import tensorflow as tf
+import numpy as np
 
 ########################################################################################################################
 EPSILON = tf.keras.backend.epsilon()
@@ -143,12 +144,14 @@ def swin_encoder(emb_dim, window_size, num_heads, drop_rate=0.2):
 
         :return: [nW, wsz*wsz, wsz*wsz]
         """
-        x = tf.zeros([1, H - window_size, W - window_size, 1])
-        x = tf.pad(x, [[0, 0], [0, 0], [0, shift_size], [0, 0]], constant_values=1)
-        x = tf.pad(x, [[0, 0], [0, shift_size], [0, 0], [0, 0]], constant_values=2)
-        x = tf.pad(x, [[0, 0], [0, window_size - shift_size], [0, 0], [0, 0]], constant_values=3)
-        x = tf.pad(x, [[0, 0], [0, 0], [0, window_size - shift_size], [0, 0]], constant_values=4)
-        x = tf.tensor_scatter_nd_update(x, [[0, H - 1, W - 1, 0]], [1])
+        x = np.zeros((1, H, W, 1))  # 1 H W 1
+        h_slices = (slice(0, -window_size), slice(-window_size, -shift_size), slice(-shift_size, None))
+        w_slices = (slice(0, -window_size), slice(-window_size, -shift_size), slice(-shift_size, None))
+        cnt = 0
+        for h in h_slices:
+            for w in w_slices:
+                x[:, h, w, :] = cnt
+                cnt += 1
         # window partition
         x = tf.reshape(x, [-1, H // window_size, window_size, W // window_size, window_size])
         x = tf.transpose(x, [0, 1, 3, 2, 4])  # B, H/w, W/w, w, w
